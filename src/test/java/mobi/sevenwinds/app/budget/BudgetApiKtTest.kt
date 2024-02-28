@@ -14,7 +14,10 @@ class BudgetApiKtTest : ServerTest() {
 
     @BeforeEach
     internal fun setUp() {
-        transaction { BudgetTable.deleteAll() }
+        transaction {
+            BudgetTable.deleteAll()
+            AuthorTable.deleteAll()
+        }
     }
 
     @Test
