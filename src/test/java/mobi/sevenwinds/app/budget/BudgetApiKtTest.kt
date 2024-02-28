@@ -6,7 +6,7 @@ import mobi.sevenwinds.common.jsonBody
 import mobi.sevenwinds.common.toResponse
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -33,9 +33,9 @@ class BudgetApiKtTest : ServerTest() {
             .toResponse<BudgetYearStatsResponse>().let { response ->
                 println("${response.total} / ${response.items} / ${response.totalByType}")
 
-                Assert.assertEquals(5, response.total)
-                Assert.assertEquals(3, response.items.size)
-                Assert.assertEquals(105, response.totalByType[BudgetType.Приход.name])
+                Assertions.assertEquals(5, response.total)
+                Assertions.assertEquals(3, response.items.size)
+                Assertions.assertEquals(105, response.totalByType[BudgetType.Приход.name])
             }
     }
 
@@ -54,11 +54,11 @@ class BudgetApiKtTest : ServerTest() {
             .toResponse<BudgetYearStatsResponse>().let { response ->
                 println(response.items)
 
-                Assert.assertEquals(30, response.items[0].amount)
-                Assert.assertEquals(5, response.items[1].amount)
-                Assert.assertEquals(400, response.items[2].amount)
-                Assert.assertEquals(100, response.items[3].amount)
-                Assert.assertEquals(50, response.items[4].amount)
+                Assertions.assertEquals(30, response.items[0].amount)
+                Assertions.assertEquals(5, response.items[1].amount)
+                Assertions.assertEquals(400, response.items[2].amount)
+                Assertions.assertEquals(100, response.items[3].amount)
+                Assertions.assertEquals(50, response.items[4].amount)
             }
     }
 
@@ -75,12 +75,61 @@ class BudgetApiKtTest : ServerTest() {
             .then().statusCode(400)
     }
 
-    private fun addRecord(record: BudgetRecord) {
+    @Test
+    fun addWithNonexistentAuthor() {
+        val record = BudgetRecord(2024, 2, 1000, BudgetType.Приход, 100500)
+        RestAssured.given()
+            .jsonBody(record)
+            .post("/budget/add")
+            .let { Assertions.assertEquals(it.statusCode, 404) }
+    }
+
+    @Test
+    fun addWithExistedAuthor() {
+        val expcetedAuthor = addRecord(CreateAuthorRequest("Бюджетный Бюджет Бюджетович"))
+        val expectedBudgetRecord = BudgetRecord(2024, 2, 1000, BudgetType.Приход, expcetedAuthor.id)
+        addRecord(expectedBudgetRecord)
+    }
+
+    @Test
+    fun getStatsByOneAuthorWithDifferentCases() {
+        val expectedAuthor1 = addRecord(CreateAuthorRequest("Бюджетный Бюджет Бюджетович"))
+        val expectedAuthor2 = addRecord(CreateAuthorRequest("БюДжЕтНый БюДжЕТ БюДжЕтОвИч"))
+        val expectedBudgetRecords = listOf(expectedAuthor1, expectedAuthor2)
+            .map {
+                addRecord(BudgetRecord(2024, 2, 1000, BudgetType.Приход, it.id))
+            }
+        RestAssured.given()
+            .queryParam("limit", 100)
+            .queryParam("offset", 0)
+            .queryParam("authorName", "Бюджетный Бюджет Бюджетович")
+            .get("/budget/year/2024/stats")
+            .toResponse<BudgetYearStatsResponse>().let { response ->
+                println(response.items)
+                Assertions.assertEquals(expectedBudgetRecords, response.items)
+            }
+
+    }
+
+
+    private fun addRecord(record: BudgetRecord): BudgetRecord{
         RestAssured.given()
             .jsonBody(record)
             .post("/budget/add")
             .toResponse<BudgetRecord>().let { response ->
-                Assert.assertEquals(record, response)
+                Assertions.assertEquals(record, response)
+                return response
+            }
+    }
+
+    private fun addRecord(record: CreateAuthorRequest): AuthorRecord {
+        RestAssured.given()
+            .jsonBody(record)
+            .post("/author/add")
+            .toResponse<AuthorRecord>().let { response ->
+                println(response)
+                Assertions.assertEquals(record.fullName, response.fullName)
+                return response
             }
     }
 }

@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  postgres:
+    restart: always
+    image: 'postgres:10'
+    environment:
+      - 'POSTGRES_DB=dev_mem'
+      - 'POSTGRES_PASSWORD=dev'
+      - 'POSTGRES_USER=dev'
+    ports:
+      - '45533:5432'

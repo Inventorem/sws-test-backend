@@ -83,7 +83,7 @@ fun Application.module() {
             call.respond(HttpStatusCode.NotFound, cause.message ?: "")
         }
         exception<OpenAPIRequiredFieldException> { cause ->
-            call.respond(HttpStatusCode.BadRequest, cause.message ?: "")
+            call.respond(HttpStatusCode.BadRequest, cause.message)
         }
         exception<MissingKotlinParameterException> { cause ->
             call.respond(HttpStatusCode.BadRequest, cause.message ?: "")
